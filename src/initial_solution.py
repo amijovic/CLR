@@ -1,12 +1,11 @@
-import sys
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.cluster import KMeans
 from sklearn.linear_model import ElasticNet
 import pandas as pd
 
-from utils import read_data_from_file, simple_visualization ,cluster_visualization
+from utils import cluster_visualization
 
-def initial_solution(data, k):
+def initial_solution(data, k, output_file_path):
     columns = ['x', 'y']
     instances = data[columns]
     scaler = MinMaxScaler()
@@ -15,7 +14,7 @@ def initial_solution(data, k):
     kmeans = KMeans(n_clusters=k, n_init='auto')
     kmeans.fit(instances)
     centers = pd.DataFrame(kmeans.cluster_centers_, columns=columns)
-    cluster_visualization(output_file_path, instances, centers, kmeans.labels_)
+    cluster_visualization(instances, centers, kmeans.labels_, k, output_file_path, 'initial_clustered_plot.png')
 
     regr_coefs = []
     regr_intercept = []
@@ -28,21 +27,10 @@ def initial_solution(data, k):
         regr_coefs.append(regr.coef_)
         regr_intercept.append(regr.intercept_)
 
-    return kmeans.cluster_centers_, kmeans.labels_, regr_coefs, regr_intercept
+    return kmeans.labels_, regr_coefs, regr_intercept
 
-def main(input_file_path, output_file_path, k):
-    data = pd.DataFrame(read_data_from_file(input_file_path), columns=['x', 'y'])
-    simple_visualization(output_file_path, '/initial_plot.png', data)
-    cluster_centers, labels, regr_coefs, regr_intercept = initial_solution(data, k)
+def main():
+    return
 
-    print(f'centers: \n{cluster_centers}')
-    print(f'labels: \n{labels}')
-    print(f'coefs: \n{regr_coefs}')
-    print(f'intercept: \n{regr_intercept}')
-
-# python3 test.py data_file_path output_file_path k
 if __name__ == '__main__':
-    input_file_path = sys.argv[1]
-    output_file_path = sys.argv[2]
-    k = int(sys.argv[3])
-    main(input_file_path, output_file_path, k)
+    main()

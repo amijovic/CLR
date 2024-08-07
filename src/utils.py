@@ -12,26 +12,27 @@ def read_data_from_file(file_path):
 
     return data
 
-def simple_visualization(file_path, file_name, data):
+def simple_visualization(data, file_path, file_name):
     X = data['x']
     y = data['y']
     plt.scatter(X, y)
     plt.xlabel('x')
     plt.xlabel('y')
     plt.title('Initial data plot')
-    plt.savefig(file_path + file_name)
+    plt.savefig(file_path + '/' + file_name)
 
-def cluster_visualization(file_path, data, centers, labels):
+def cluster_visualization(data, centers, labels, k, file_path, file_name):
     plt.figure()
-    for c in range(len(centers)):
+    for c in range(k):
         isinstances = data[labels == c]
         plt.scatter(isinstances['x'], isinstances['y'])
-    plt.scatter(centers['x'], centers['y'], marker='X', color='black')
+    if centers is not None:
+        plt.scatter(centers['x'], centers['y'], marker='X', color='black')
     plt.xlabel('x')
     plt.xlabel('y')
     plt.title('Clustered data plot')
     # plt.legend()
-    plt.savefig(file_path + 'clustered_plot.png')
+    plt.savefig(file_path + '/' + file_name)
 
 def main():
     return
