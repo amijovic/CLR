@@ -13,7 +13,7 @@ from initial_solution import initial_solution
 
 def dist_to_regression_line(point, regr_coef, regr_interception):
     x, y = point[0], point[1]
-    return abs(regr_coef*x - y + regr_interception) / np.sqrt(regr_coef**2 + regr_interception**2)
+    return abs(regr_coef*x - y + regr_interception) / np.sqrt(regr_coef**2 + (-1)**2)
 
 def calculate_nearest_clusters(data, regr_coefs, regr_interception, k):
     nearest_clusters = []
@@ -32,13 +32,15 @@ def predict(X, regr_coef, regr_interception):
     return list(prediction)
 
 def regression_error(data, labels, regr_coefs, regr_interception, k):
-    Y_values = data.loc[:, 'y'].values
+    Y_values = []
     Y_predictions = []
     for c in range(k):
         cluster = data[labels == c]
         X = cluster.loc[:, 'x'].values
+        Y = cluster.loc[:, 'y'].values
         y_pred = predict(X, regr_coefs[c], regr_interception[c])
         Y_predictions = Y_predictions + y_pred
+        Y_values = Y_values + list(Y)
 
     error = np.sum(abs(np.subtract(Y_values, Y_predictions)))
     mse = mean_squared_error(Y_values, Y_predictions)
@@ -55,32 +57,6 @@ def recalc_nearest_clusters(data, nearest_clusters, regr_coefs, regr_interceptio
     new_nearest_clusters[inst_idx] = sorted_clusters
     return new_nearest_clusters
 
-def calc_error_after_change(inst_idx, cluster_idx, data, labels, k):
-    new_labels = deepcopy(labels)
-    new_labels[inst_idx] = cluster_idx
-    regr_coefs, regr_interception = elastic_net(data, new_labels, k)
-    error, mse = regression_error(data, new_labels, regr_coefs, regr_interception, k)
-    return error, mse, regr_coefs, regr_interception, new_labels
-
-def move_one_inst(data, nearest_clusters, labels, best_solution_mse, best_solution_regr_coefs, best_solution_regr_interception):
-    instance_idx = [i for i in range(data.shape[0])]
-    shuffled_instances = sorted(instance_idx, key=lambda x: random.random())
-
-    i = 0
-    while i < len(shuffled_instances):
-        instance = shuffled_instances[i]
-        for j in nearest_clusters[instance]:
-            if j == labels[instance]:
-                break
-
-            error, mse, regr_coefs, regr_interception, new_labels = calc_error_after_change(instance, j, data, labels, k)
-            if mse < best_solution_mse:
-                new_nearest_clusters = recalc_nearest_clusters(data, nearest_clusters, regr_coefs, regr_interception, instance, k)
-                return True, error, mse, new_labels, new_nearest_clusters, regr_coefs, regr_interception
-        i += 1
-
-    return False, None, None, None, None, None, None
-
 def calc_error_after_change_approximation(inst_idx, new_cluster_idx, data, labels, error, regr_coefs, regr_interception):
     point = data.iloc[inst_idx]
     x, y = point['x'], point['y']
@@ -89,7 +65,7 @@ def calc_error_after_change_approximation(inst_idx, new_cluster_idx, data, label
     new_error = new_error + abs(y - (regr_coefs[new_cluster_idx]*x + regr_interception[new_cluster_idx]))
     return new_error
 
-def move_one_inst_approximation(data, nearest_clusters, labels, best_solution_error, best_solution_regr_coefs, best_solution_regr_interception):
+def move_one_inst_approximation(data, nearest_clusters, labels, best_solution_error, best_solution_mse, best_solution_regr_coefs, best_solution_regr_interception):
     instance_idx = [i for i in range(data.shape[0])]
     shuffled_instances = sorted(instance_idx, key=lambda x: random.random())
 
@@ -114,14 +90,103 @@ def move_one_inst_approximation(data, nearest_clusters, labels, best_solution_er
                 new_labels = deepcopy(labels)
                 new_labels[instance] = j
                 regr_coefs, regr_interception = elastic_net(data, new_labels, k)
-                new_nearest_clusters = recalc_nearest_clusters(data, nearest_clusters, regr_coefs, regr_interception, instance, k)
-                error_after_change, mse = regression_error(data, labels, regr_coefs, regr_interception, k)
-                return True, error_after_change, mse, new_labels, new_nearest_clusters, regr_coefs, regr_interception
+                # new_nearest_clusters = recalc_nearest_clusters(data, nearest_clusters, regr_coefs, regr_interception, instance, k)
+                new_nearest_clusters = calculate_nearest_clusters(data, regr_coefs, regr_interception, k)
+                error_after_change, mse = regression_error(data, new_labels, regr_coefs, regr_interception, k)
+                
+                if mse < best_solution_mse:
+                    return True, error_after_change, mse, new_labels, new_nearest_clusters, regr_coefs, regr_interception
         i += 1
 
     return False, None, None, None, None, None, None
 
-def main(input_file_path, output_dir_path, k, algorithm_name):
+#--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+def move_l_instances(data, nearest_clusters, labels, best_solution_error, best_solution_regr_coefs, best_solution_regr_interception, L):
+    instance_idx = [i for i in range(data.shape[0])]
+    shuffled_instances = sorted(instance_idx, key=lambda x: random.random())
+
+    l = 0
+    l_insts  = [] # pair (inst_idx, cluster)
+    error = best_solution_error
+    i = 0
+    while i < len(shuffled_instances):
+        instance = shuffled_instances[i]
+        for j in nearest_clusters[instance]:
+            if j == labels[instance]:
+                break
+
+            error = calc_error_after_change_approximation(
+                instance, 
+                j, 
+                data, 
+                labels, 
+                error, 
+                best_solution_regr_coefs, 
+                best_solution_regr_interception
+            )
+
+            if error < best_solution_error:
+                l += 1
+                l_insts.append((instance, j))
+                break
+
+        if l == L:
+            new_labels = deepcopy(labels)
+            for (inst, cluster) in l_insts:
+                new_labels[inst] = cluster
+            regr_coefs, regr_interception = elastic_net(data, new_labels, k)
+            new_nearest_clusters = deepcopy(nearest_clusters)
+            for (inst, cluster) in l_insts:
+                new_nearest_clusters = recalc_nearest_clusters(data, new_nearest_clusters, regr_coefs, regr_interception, inst, k)
+            error_after_change, mse = regression_error(data, new_labels, regr_coefs, regr_interception, k)
+            return True, error_after_change, mse, new_labels, new_nearest_clusters, regr_coefs, regr_interception
+        i += 1
+
+    return False, None, None, None, None, None, None
+
+def move_instances_to_one_cluster(data, nearest_clusters, labels, best_solution_error, best_solution_regr_coefs, best_solution_regr_interception, c):
+    instance_idx = [i for i in range(data.shape[0])]
+    shuffled_instances = sorted(instance_idx, key=lambda x: random.random())
+
+    insts  = [] # [inst_idx]
+    error = best_solution_error
+    i = 0
+    while i < len(shuffled_instances):
+        instance = shuffled_instances[i]
+        
+        if labels[instance] == c:
+                i += 1
+                continue
+        
+        error = calc_error_after_change_approximation(
+            instance, 
+            c, 
+            data, 
+            labels, 
+            error, 
+            best_solution_regr_coefs, 
+            best_solution_regr_interception
+        )
+
+        if error < best_solution_error:
+            insts.append(instance)
+        i += 1
+
+    if error < best_solution_error:
+        new_labels = deepcopy(labels)
+        for inst in insts:
+            new_labels[inst] = c
+        regr_coefs, regr_interception = elastic_net(data, new_labels, k)
+        new_nearest_clusters = deepcopy(nearest_clusters)
+        for inst in insts:
+            new_nearest_clusters = recalc_nearest_clusters(data, new_nearest_clusters, regr_coefs, regr_interception, inst, k)
+        error_after_change, mse = regression_error(data, new_labels, regr_coefs, regr_interception, k)
+        return True, error_after_change, mse, new_labels, new_nearest_clusters, regr_coefs, regr_interception
+
+    return False, None, None, None, None, None, None
+#--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def main(input_file_path, output_dir_path, k, algorithm, algorithm_name):
     time_start = time.time()
     data = pd.DataFrame(read_data_from_file(input_file_path), columns=['x', 'y'])
     
@@ -145,27 +210,46 @@ def main(input_file_path, output_dir_path, k, algorithm_name):
         k
     )
 
+    if algorithm == 'move_cluster':
+        cluster = 0
     iter = 1
     while True:
         sys.stdout.write('.')
         sys.stdout.flush()
-        solution_improved, error, mse, labels, nearest_clusters, regr_coefs, regr_interception = move_one_inst_approximation(
-            data,
-            best_solution_nearest_clusters,
-            best_solution_labels,
-            best_solution_error,
-            best_solution_regr_coefs,
-            best_solution_regr_interception
-        )
 
-        # solution_improved, error, mse, labels, nearest_clusters, regr_coefs, regr_interception = move_one_inst(
-        #     data,
-        #     best_solution_nearest_clusters,
-        #     best_solution_labels,
-        #     best_solution_mse,
-        #     best_solution_regr_coefs,
-        #     best_solution_regr_interception
-        # )
+        match algorithm:
+            case 'move':
+                solution_improved, error, mse, labels, nearest_clusters, regr_coefs, regr_interception = move_one_inst_approximation(
+                    data,
+                    best_solution_nearest_clusters,
+                    best_solution_labels,
+                    best_solution_error,
+                    best_solution_mse,
+                    best_solution_regr_coefs,
+                    best_solution_regr_interception
+                )
+            case 'move_l':
+                solution_improved, error, mse, labels, nearest_clusters, regr_coefs, regr_interception = move_l_instances(
+                    data,
+                    best_solution_nearest_clusters,
+                    best_solution_labels,
+                    best_solution_error,
+                    best_solution_regr_coefs,
+                    best_solution_regr_interception,
+                    3
+                )
+            case 'move_cluster':
+                cluster = cluster % k
+                solution_improved, error, mse, labels, nearest_clusters, regr_coefs, regr_interception = move_instances_to_one_cluster(
+                    data,
+                    best_solution_nearest_clusters,
+                    best_solution_labels,
+                    best_solution_error,
+                    best_solution_regr_coefs,
+                    best_solution_regr_interception,
+                    cluster
+                )
+                cluster += 1
 
         if not solution_improved:
             print('\nsolution not improved')
@@ -175,10 +259,10 @@ def main(input_file_path, output_dir_path, k, algorithm_name):
             print('\nexceded iteration number')
             break
         
-        best_solution_labels = labels
-        best_solution_nearest_clusters = nearest_clusters
-        best_solution_regr_coefs = regr_coefs
-        best_solution_regr_interception = regr_interception
+        best_solution_labels = deepcopy(labels)
+        best_solution_nearest_clusters = deepcopy(nearest_clusters)
+        best_solution_regr_coefs = deepcopy(regr_coefs)
+        best_solution_regr_interception = deepcopy(regr_interception)
         best_solution_mse = mse
         best_solution_error = error
         iter += 1
@@ -221,4 +305,8 @@ if __name__ == '__main__':
     match algorithm:
         case 'move':
             algorithm_name = 'move_one_inst'
-    main(input_file_path, output_dir_path, k, algorithm_name)
+        case 'move_l':
+            algorithm_name = 'move_l_inst'
+        case 'move_cluster':
+            algorithm_name = 'move_to cluster'
+    main(input_file_path, output_dir_path, k, algorithm, algorithm_name)
