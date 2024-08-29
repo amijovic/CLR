@@ -25,7 +25,8 @@ def generate_noise(sample_size):
 
 def generate_linear_regression_sample(sample_size, attrib_num, a, b):
     noise = generate_noise(sample_size)
-    x = np.random.rand(sample_size, attrib_num)
+    # x = np.random.rand(sample_size, attrib_num)
+    x = np.random.uniform(-10, 10, (sample_size, attrib_num))
     y = []
     for sample in range(sample_size):
         Y = 0.0
@@ -42,7 +43,7 @@ def visualize_data(X, Y, sample_num, file_path):
         plt.xlabel('x')
         plt.ylabel('y')
     plt.savefig(file_path + '/data.png')
-    plt.show()
+    # plt.show()
 
 def write_data(X, Y, sample_num, sample_size, attrib_num, file_path):
     data = []
