@@ -1,6 +1,5 @@
 import os
 from matplotlib import pyplot as plt
-from sklearn.linear_model import ElasticNet
 
 def read_data_from_file(file_path):
     with open(file_path, 'r') as f:
@@ -31,19 +30,6 @@ def cluster_visualization(data, centers, labels, k, regr_coefs, regr_intercept, 
     # plt.legend()
     file_path = os.path.join(dir_path, algorithm_name, file_name)
     plt.savefig(file_path)
-
-def elastic_net(data, labels, k):
-    regr_coefs = []
-    regr_intercept = []
-    for c in range(k):
-        cluster = data[labels == c]
-        model = ElasticNet(random_state=0)
-        y = cluster.loc[:, 'y'].values
-        X = cluster.loc[:, 'x'].values.reshape((y.shape[0], 1))
-        model.fit(X, y)
-        regr_coefs.append(model.coef_)
-        regr_intercept.append(model.intercept_)
-    return regr_coefs, regr_intercept
 
 def write_results(time, mse, regr_coefs, regr_interception, labels, dir_path, algorithm_name):
     file_path = os.path.join(dir_path, algorithm_name, 'results.txt')
