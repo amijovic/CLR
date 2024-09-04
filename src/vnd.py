@@ -16,6 +16,12 @@ def vnd1(data, k, algorithm, algorithm_name):
         algorithm_name
     )
 
+    if algorithm == "move_l":
+        l = 3       # okoline 3, 2, 1
+        # l = 1       # okoline 1, 2, 3
+        solution_not_improved = 0
+        map = {3:2, 2:1, 1:3}
+
     if algorithm == 'move_cluster':
         cluster = 0
         first_round = True
@@ -44,6 +50,10 @@ def vnd1(data, k, algorithm, algorithm_name):
                         k
                 )
                 case 'move_l':
+                    sys.stdout.write(f'{l}')
+                    sys.stdout.write('')
+                    sys.stdout.flush()
+
                     first_improvement, error, mse, labels, nearest_clusters, regr_coefs, regr_interception = move_l_instances(
                         data,
                         best_solution_nearest_clusters,
@@ -52,9 +62,20 @@ def vnd1(data, k, algorithm, algorithm_name):
                         best_solution_mse,
                         best_solution_regr_coefs,
                         best_solution_regr_interception,
-                        5,
+                        l,
                         k
                     )
+
+                    if not first_improvement:
+                        # l = l % 3 + 1 # okoline 1, 2, 3
+                        l = map[l]      # okoline 3, 2, 1
+                        solution_not_improved += 1
+                    else:
+                        solution_not_improved = 0
+
+                    if solution_not_improved < 3:
+                        first_improvement = True
+
                 case 'move_cluster':
                     while first_round:
                         first_improvement, error, mse, labels, nearest_clusters, regr_coefs, regr_interception = move_instances_to_one_cluster(
@@ -135,6 +156,12 @@ def vnd2(data, k, algorithm, algorithm_name):
         algorithm_name
     )
 
+    if algorithm == "move_l":
+        l = 3       # okoline 3, 2, 1
+        # l = 1       # okoline 1, 2, 3
+        solution_not_improved = 0
+        map = {3:2, 2:1, 1:3}
+
     if algorithm == 'move_cluster':
         cluster = 0
         first_round = True
@@ -157,6 +184,10 @@ def vnd2(data, k, algorithm, algorithm_name):
                     k
             )
             case 'move_l':
+                sys.stdout.write(f'{l}')
+                sys.stdout.write('')
+                sys.stdout.flush()
+
                 solution_improved, error, mse, labels, nearest_clusters, regr_coefs, regr_interception = move_l_instances(
                     data,
                     best_solution_nearest_clusters,
@@ -165,9 +196,20 @@ def vnd2(data, k, algorithm, algorithm_name):
                     best_solution_mse,
                     best_solution_regr_coefs,
                     best_solution_regr_interception,
-                    5,
+                    l,
                     k
                 )
+
+                if not solution_improved:
+                    # l = l % 3 + 1 # okoline 1, 2, 3
+                    l = map[l]      # okoline 3, 2, 1
+                    solution_not_improved += 1
+                else:
+                    solution_not_improved = 0
+
+                if solution_not_improved < 3:
+                    solution_improved = True
+
             case 'move_cluster':
                 while first_round:
                     solution_improved, error, mse, labels, nearest_clusters, regr_coefs, regr_interception = move_instances_to_one_cluster(
@@ -218,7 +260,6 @@ def vnd2(data, k, algorithm, algorithm_name):
 
     return best_solution_mse, best_solution_regr_coefs, best_solution_regr_interception, best_solution_labels
     
-
 def main(input_file_path, output_dir_path, k, algorithm, option):
     algorithm_name = []
     match algorithm:
@@ -233,6 +274,7 @@ def main(input_file_path, output_dir_path, k, algorithm, option):
     data = pd.DataFrame(read_data_from_file(input_file_path), columns=['x', 'y'])
     
     if option == 1:
+        algorithm_name += "_1"
         best_solution_mse, best_solution_regr_coefs, best_solution_regr_interception, best_solution_labels = vnd1(
             data, 
             k, 

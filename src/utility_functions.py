@@ -45,17 +45,6 @@ def calculate_nearest_clusters(data, regr_coefs, regr_interception, k):
         nearest_clusters.append(sorted_clusters)
     return nearest_clusters
 
-def recalc_nearest_clusters(data, nearest_clusters, regr_coefs, regr_interception, inst_idx, k):
-    new_nearest_clusters = deepcopy(nearest_clusters)
-    instance = data.iloc[inst_idx,].values
-    sorted_clusters = [j for j in range(k)]
-    sorted_clusters = sorted(
-        sorted_clusters, 
-        key=lambda x: dist_to_regression_line(instance, regr_coefs[x], regr_interception[x])
-    )
-    new_nearest_clusters[inst_idx] = sorted_clusters
-    return new_nearest_clusters
-
 def predict(X, regr_coef, regr_interception):
     prediction = map(lambda x: regr_coef*x + regr_interception, X)
     return list(prediction)
@@ -75,13 +64,27 @@ def regression_error(data, labels, regr_coefs, regr_interception, k):
     mse = mean_squared_error(Y_values, Y_predictions)
     return error, mse
 
+def regression_mse(data, labels, regr_coefs, regr_interception, k):
+    Y_values = []
+    Y_predictions = []
+    for c in range(k):
+        cluster = data[labels == c]
+        X = cluster.loc[:, 'x'].values
+        Y = cluster.loc[:, 'y'].values
+        y_pred = predict(X, regr_coefs[c], regr_interception[c])
+        Y_predictions = Y_predictions + y_pred
+        Y_values = Y_values + list(Y)
+
+    mse = mean_squared_error(Y_values, Y_predictions)
+    return mse
+
 def calc_error_after_change(inst_idx, cluster_idx, data, labels, regr_coefs, regr_interception, k):
     new_labels = deepcopy(labels)
     new_labels[inst_idx] = cluster_idx
     clusters = [cluster_idx, labels[inst_idx]]
     new_regr_coefs, new_regr_interception = recalc_elastic_net(data, new_labels, clusters, regr_coefs, regr_interception)
-    error, _ = regression_error(data, new_labels, new_regr_coefs, new_regr_interception, k)
-    return error, new_regr_coefs, new_regr_interception, new_labels
+    mse = regression_mse(data, new_labels, new_regr_coefs, new_regr_interception, k)
+    return mse, new_regr_coefs, new_regr_interception, new_labels
 
 def calc_error_after_change_approximation(inst_idx, new_cluster_idx, data, labels, error, regr_coefs, regr_interception):
     point = data.iloc[inst_idx]

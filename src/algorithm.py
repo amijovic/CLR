@@ -50,7 +50,6 @@ def move_one_inst_approximation(data, nearest_clusters, labels, best_solution_er
                 new_labels = deepcopy(labels)
                 new_labels[instance] = j
                 regr_coefs, regr_interception = recalc_elastic_net(data, new_labels, clusters, best_solution_regr_coefs, best_solution_regr_interception)
-                # new_nearest_clusters = recalc_nearest_clusters(data, nearest_clusters, regr_coefs, regr_interception, instance, k)
                 new_nearest_clusters = calculate_nearest_clusters(data, regr_coefs, regr_interception, k)
                 error_after_change, mse = regression_error(data, new_labels, regr_coefs, regr_interception, k)
                 
@@ -104,11 +103,15 @@ def move_l_instances(data, nearest_clusters, labels, best_solution_error, best_s
 
             if mse < best_solution_mse:
                 return True, error_after_change, mse, new_labels, new_nearest_clusters, regr_coefs, regr_interception
+            else:
+                l = 0
+                l_insts = []
+                error = best_solution_error
         i += 1
 
-    return False, None, None, None, None, None, None
+    return False, best_solution_error, best_solution_mse, labels, nearest_clusters, best_solution_regr_coefs, best_solution_regr_interception
 
-def move_instances_to_one_cluster(data, nearest_clusters, labels, best_solution_error, best_solution_mse, best_solution_regr_coefs, best_solution_regr_interception, c, k):
+def move_instances_to_one_cluster(data, labels, best_solution_error, best_solution_mse, best_solution_regr_coefs, best_solution_regr_interception, c, k):
     instance_idx = [i for i in range(data.shape[0])]
     shuffled_instances = sorted(instance_idx, key=lambda x: random.random())
 
@@ -144,10 +147,10 @@ def move_instances_to_one_cluster(data, nearest_clusters, labels, best_solution_
             clusters.append(labels[inst])
             new_labels[inst] = c
         regr_coefs, regr_interception = recalc_elastic_net(data, new_labels, clusters, best_solution_regr_coefs, best_solution_regr_interception)
-        new_nearest_clusters = calculate_nearest_clusters(data, regr_coefs, regr_interception, k)
         error_after_change, mse = regression_error(data, new_labels, regr_coefs, regr_interception, k)
 
         if mse < best_solution_mse:
+            new_nearest_clusters = calculate_nearest_clusters(data, regr_coefs, regr_interception, k)
             return True, error_after_change, mse, new_labels, new_nearest_clusters, regr_coefs, regr_interception
 
     return False, None, None, None, None, None, None
