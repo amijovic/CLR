@@ -1,5 +1,14 @@
 import os
+import sys
 from matplotlib import pyplot as plt
+
+show_progress = True
+
+def print_progress(*msg):
+    if show_progress:
+        for m in msg:
+            sys.stdout.write(m)
+        sys.stdout.flush()
 
 def read_data_from_file(file_path):
     with open(file_path, 'r') as f:
@@ -30,6 +39,7 @@ def cluster_visualization(data, centers, labels, k, regr_coefs, regr_intercept, 
     # plt.legend()
     file_path = os.path.join(dir_path, algorithm_name, file_name)
     plt.savefig(file_path)
+    plt.close()
 
 def write_results(time, mse, regr_coefs, regr_interception, labels, dir_path, algorithm_name):
     file_path = os.path.join(dir_path, algorithm_name, 'results.txt')

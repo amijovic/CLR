@@ -78,20 +78,27 @@ def regression_mse(data, labels, regr_coefs, regr_interception, k):
     mse = mean_squared_error(Y_values, Y_predictions)
     return mse
 
-def calc_error_after_change(inst_idx, cluster_idx, data, labels, regr_coefs, regr_interception, k):
+def calc_error_after_change(inst_idxs, cluster_idxs, data, labels, regr_coefs, regr_interception, k):
     new_labels = deepcopy(labels)
-    new_labels[inst_idx] = cluster_idx
-    clusters = [cluster_idx, labels[inst_idx]]
-    new_regr_coefs, new_regr_interception = recalc_elastic_net(data, new_labels, clusters, regr_coefs, regr_interception)
+    changed_clusters = set()
+    for i, inst_idx in enumerate(inst_idxs):
+        new_labels[inst_idx] = cluster_idxs[i]
+        changed_clusters.add(cluster_idxs[i])
+        changed_clusters.add(labels[inst_idx])
+        # clusters = [cluster_idx, labels[inst_idx]]
+    new_regr_coefs, new_regr_interception = recalc_elastic_net(data, new_labels, changed_clusters, regr_coefs, regr_interception)
     mse = regression_mse(data, new_labels, new_regr_coefs, new_regr_interception, k)
     return mse, new_regr_coefs, new_regr_interception, new_labels
 
-def calc_error_after_change_approximation(inst_idx, new_cluster_idx, data, labels, error, regr_coefs, regr_interception):
-    point = data.iloc[inst_idx]
-    x, y = point['x'], point['y']
-    old_cluster_idx = labels[inst_idx]
-    new_error = error - abs(y - (regr_coefs[old_cluster_idx]*x + regr_interception[old_cluster_idx]))
-    new_error = new_error + abs(y - (regr_coefs[new_cluster_idx]*x + regr_interception[new_cluster_idx]))
+def calc_error_after_change_approximation(inst_idxs, new_cluster_idxs, data, labels, error, regr_coefs, regr_interception):
+    new_error = error
+    for i, inst_idx in enumerate(inst_idxs):
+        new_cluster_idx = new_cluster_idxs[i]
+        point = data.iloc[inst_idx]
+        x, y = point['x'], point['y']
+        old_cluster_idx = labels[inst_idx]
+        new_error = new_error - abs(y - (regr_coefs[old_cluster_idx]*x + regr_interception[old_cluster_idx]))
+        new_error = new_error + abs(y - (regr_coefs[new_cluster_idx]*x + regr_interception[new_cluster_idx]))
     return new_error
 
 def main():

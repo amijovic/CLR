@@ -1,21 +1,14 @@
+from copy import deepcopy
+import time
 import sys
 import pandas as pd
-import time
-from copy import deepcopy
 
-from utils import read_data_from_file, write_results, cluster_visualization
+from utils import print_progress, read_data_from_file, cluster_visualization, write_results
 from initial_solution import initialization
-from algorithm import move_one_inst_approximation, move_l_instances, move_instances_to_one_cluster, move_one_inst
+from algorithm import move_one_inst, move_one_inst_approximation, move_l_instances
+from algorithm import move_instances_to_one_cluster, local_search_swap
 
-def vnd1(data, k, algorithm, algorithm_name):
-    best_solution_labels, best_solution_regr_coefs, best_solution_regr_interception, \
-    best_solution_error, best_solution_mse, best_solution_nearest_clusters = initialization(
-        data, 
-        k, 
-        output_dir_path,
-        algorithm_name
-    )
-
+def vnd(data, k, algorithm, algorithm_name, output_dir_path, option):
     if algorithm == "move_l":
         l = 3       # okoline 3, 2, 1
         # l = 1       # okoline 1, 2, 3
@@ -26,15 +19,25 @@ def vnd1(data, k, algorithm, algorithm_name):
         cluster = 0
         first_round = True
 
+    best_solution_labels, best_solution_regr_coefs, best_solution_regr_interception, \
+        best_solution_error, best_solution_mse, best_solution_nearest_clusters = initialization(
+            data, 
+            k, 
+            output_dir_path,
+            algorithm_name
+    )
+
+    error, mse = float('inf'), float('inf')
+    labels, regr_coefs, regr_interception, nearest_clusters = None, None, None, None
+
     first_improvement = True
     solution_improved = True
     iter = 1
     while True:
         if first_improvement == True:
-            sys.stdout.write('.')
+            print_progress('.')
         else:
-            sys.stdout.write('*')
-        sys.stdout.flush()
+            print_progress('*')
 
         if first_improvement == True:
             match algorithm:
@@ -48,11 +51,9 @@ def vnd1(data, k, algorithm, algorithm_name):
                         best_solution_regr_coefs,
                         best_solution_regr_interception,
                         k
-                )
+                    )
                 case 'move_l':
-                    sys.stdout.write(f'{l}')
-                    sys.stdout.write('')
-                    sys.stdout.flush()
+                    print_progress(f'{l}')
 
                     first_improvement, error, mse, labels, nearest_clusters, regr_coefs, regr_interception = move_l_instances(
                         data,
@@ -107,7 +108,18 @@ def vnd1(data, k, algorithm, algorithm_name):
                         k
                     )
                     cluster += 1
-            
+                case 'swap':
+                    first_improvement, error, mse, labels, nearest_clusters, regr_coefs, regr_interception = local_search_swap(
+                        data,
+                        best_solution_nearest_clusters,
+                        best_solution_labels,
+                        best_solution_error,
+                        best_solution_mse,
+                        best_solution_regr_coefs,
+                        best_solution_regr_interception,
+                        k
+                    )
+
             if first_improvement == True:
                 best_solution_labels = deepcopy(labels)
                 best_solution_nearest_clusters = deepcopy(nearest_clusters)
@@ -134,168 +146,47 @@ def vnd1(data, k, algorithm, algorithm_name):
                 best_solution_regr_interception = deepcopy(regr_interception)
                 best_solution_mse = mse
                 best_solution_error = error
+        
+        if option != 1 and first_improvement == False:
+            solution_improved = False
 
         if not solution_improved:
-            print('\nsolution not improved')
+            print_progress('\nsolution not improved')
             break
 
         if iter > 100000:
-            print('\nexceded iteration number')
+            print_progress('\nexceded iteration number')
             break
         
         iter += 1
 
     return best_solution_mse, best_solution_regr_coefs, best_solution_regr_interception, best_solution_labels
-    
-def vnd2(data, k, algorithm, algorithm_name):
-    best_solution_labels, best_solution_regr_coefs, best_solution_regr_interception, \
-    best_solution_error, best_solution_mse, best_solution_nearest_clusters = initialization(
-        data, 
-        k, 
-        output_dir_path,
-        algorithm_name
-    )
-
-    if algorithm == "move_l":
-        l = 3       # okoline 3, 2, 1
-        # l = 1       # okoline 1, 2, 3
-        solution_not_improved = 0
-        map = {3:2, 2:1, 1:3}
-
-    if algorithm == 'move_cluster':
-        cluster = 0
-        first_round = True
-
-    iter = 1
-    while True:
-        sys.stdout.write('.')
-        sys.stdout.flush()
-
-        match algorithm:
-            case 'move':
-                solution_improved, error, mse, labels, nearest_clusters, regr_coefs, regr_interception = move_one_inst_approximation(
-                    data,
-                    best_solution_nearest_clusters,
-                    best_solution_labels,
-                    best_solution_error,
-                    best_solution_mse,
-                    best_solution_regr_coefs,
-                    best_solution_regr_interception,
-                    k
-            )
-            case 'move_l':
-                sys.stdout.write(f'{l}')
-                sys.stdout.write('')
-                sys.stdout.flush()
-
-                solution_improved, error, mse, labels, nearest_clusters, regr_coefs, regr_interception = move_l_instances(
-                    data,
-                    best_solution_nearest_clusters,
-                    best_solution_labels,
-                    best_solution_error,
-                    best_solution_mse,
-                    best_solution_regr_coefs,
-                    best_solution_regr_interception,
-                    l,
-                    k
-                )
-
-                if not solution_improved:
-                    # l = l % 3 + 1 # okoline 1, 2, 3
-                    l = map[l]      # okoline 3, 2, 1
-                    solution_not_improved += 1
-                else:
-                    solution_not_improved = 0
-
-                if solution_not_improved < 3:
-                    solution_improved = True
-
-            case 'move_cluster':
-                while first_round:
-                    solution_improved, error, mse, labels, nearest_clusters, regr_coefs, regr_interception = move_instances_to_one_cluster(
-                        data,
-                        best_solution_nearest_clusters,
-                        best_solution_labels,
-                        best_solution_error,
-                        best_solution_mse,
-                        best_solution_regr_coefs,
-                        best_solution_regr_interception,
-                        cluster,
-                        k
-                    )
-                    cluster += 1
-
-                    if cluster == k:
-                        first_round = False
-
-                cluster = cluster % k
-                solution_improved, error, mse, labels, nearest_clusters, regr_coefs, regr_interception = move_instances_to_one_cluster(
-                    data,
-                    best_solution_nearest_clusters,
-                    best_solution_labels,
-                    best_solution_error,
-                    best_solution_mse,
-                    best_solution_regr_coefs,
-                    best_solution_regr_interception,
-                    cluster,
-                    k
-                )
-                cluster += 1
-            
-        if not solution_improved:
-            print('\nsolution not improved')
-            break
-
-        if iter > 100000:
-            print('\nexceded iteration number')
-            break
-        
-        best_solution_labels = deepcopy(labels)
-        best_solution_nearest_clusters = deepcopy(nearest_clusters)
-        best_solution_regr_coefs = deepcopy(regr_coefs)
-        best_solution_regr_interception = deepcopy(regr_interception)
-        best_solution_mse = mse
-        best_solution_error = error
-        iter += 1
-
-    return best_solution_mse, best_solution_regr_coefs, best_solution_regr_interception, best_solution_labels
-    
+ 
 def main(input_file_path, output_dir_path, k, algorithm, option):
-    algorithm_name = []
-    match algorithm:
-        case 'move':
-            algorithm_name = 'move_one_inst'
-        case 'move_l':
-            algorithm_name = 'move_l_inst'
-        case 'move_cluster':
-            algorithm_name = 'move_to cluster'
-
     time_start = time.time()
+
     data = pd.DataFrame(read_data_from_file(input_file_path), columns=['x', 'y'])
-    
+    algorithm_name = algorithm
+
     if option == 1:
         algorithm_name += "_1"
-        best_solution_mse, best_solution_regr_coefs, best_solution_regr_interception, best_solution_labels = vnd1(
-            data, 
-            k, 
-            algorithm, 
-            algorithm_name
-        )
-    else:
-        best_solution_mse, best_solution_regr_coefs, best_solution_regr_interception, best_solution_labels = vnd2(
-            data, 
-            k, 
-            algorithm, 
-            algorithm_name
-        )
+
+    best_solution_mse, best_solution_regr_coefs, best_solution_regr_interception, best_solution_labels = vnd(
+        data, 
+        k, 
+        algorithm,
+        algorithm_name,
+        output_dir_path,
+        option
+    )
 
     execution_time = time.time() - time_start
     
-    print()
-    print('Execution time:', execution_time)
-    print('Best solution mse:', best_solution_mse)
-    print('Best solution coefs:\n\t', best_solution_regr_coefs)
-    print('Best solution inteception:\n\t', best_solution_regr_interception)
+    print_progress('\n')
+    print_progress('Execution time:', str(execution_time), '\n')
+    print_progress('Best solution mse:', str(best_solution_mse), '\n')
+    print_progress('Best solution coefs:\n\t', str(best_solution_regr_coefs), '\n')
+    print_progress('Best solution inteception:\n\t', str(best_solution_regr_interception), '\n')
     cluster_visualization(
         data, 
         None, 
@@ -317,12 +208,10 @@ def main(input_file_path, output_dir_path, k, algorithm, option):
         algorithm_name
     )
 
-
 if __name__ == '__main__':
     input_file_path = sys.argv[1]
     output_dir_path = sys.argv[2]
     k = int(sys.argv[3])
     algorithm = sys.argv[4]
     option = int(sys.argv[5])
-
     main(input_file_path, output_dir_path, k, algorithm, option)
