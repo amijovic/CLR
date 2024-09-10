@@ -9,24 +9,26 @@ def read_parameters(file_path):
     
     sample_num = int(lines[0])
     sample_size = int(lines[1])
-    attrib_num = int(lines[2])
+    mu, sigma = float(lines[2].split()[0]), float(lines[2].split()[1])
+    x_min, x_max = float(lines[3].split()[0]), float(lines[3].split()[1])
+    attrib_num = int(lines[4])
     a, b = [], []
-    for i in range(3, sample_num+3):
+    for i in range(5, sample_num+5):
         line = lines[i].strip().split()
         coefs = []
         for j in range(attrib_num):
             coefs.append(float(line[j]))
         a.append(coefs)
         b.append(float(line[-1]))
-    return sample_num, sample_size, attrib_num, a, b
+    return sample_num, sample_size, mu, sigma, x_min, x_max, attrib_num, a, b
 
-def generate_noise(sample_size):
-    return np.random.randn(sample_size)
+def generate_noise(sample_size, mu, sigma):
+    return np.random.randn(sample_size)*sigma + mu
 
-def generate_linear_regression_sample(sample_size, attrib_num, a, b):
-    noise = generate_noise(sample_size)
+def generate_linear_regression_sample(sample_size, mu, sigma, x_min, x_max, attrib_num, a, b):
+    noise = generate_noise(sample_size, mu, sigma)
     # x = np.random.rand(sample_size, attrib_num)
-    x = np.random.uniform(-10, 10, (sample_size, attrib_num))
+    x = np.random.uniform(x_min, x_max, (sample_size, attrib_num))
     y = []
     for sample in range(sample_size):
         Y = 0.0
@@ -43,6 +45,7 @@ def visualize_data(X, Y, sample_num, file_path):
         plt.xlabel('x')
         plt.ylabel('y')
     plt.savefig(file_path + '/data.png')
+    plt.close()
     # plt.show()
 
 def write_data(X, Y, sample_num, sample_size, attrib_num, file_path):
@@ -69,10 +72,10 @@ def write_data(X, Y, sample_num, sample_size, attrib_num, file_path):
         f.writelines(data)
   
 def main(input_file, file_path):
-    sample_num, sample_size, attrib_num, a, b = read_parameters(input_file)
+    sample_num, sample_size, mu, sigma, x_min, x_max, attrib_num, a, b = read_parameters(input_file)
     X, Y = [], []
     for i in range(sample_num):
-        x, y = generate_linear_regression_sample(sample_size, attrib_num, a[i], b[i])
+        x, y = generate_linear_regression_sample(sample_size, mu, sigma, x_min, x_max, attrib_num, a[i], b[i])
         X.append(x)
         Y.append(y)
     if attrib_num == 1:

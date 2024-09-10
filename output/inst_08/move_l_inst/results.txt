@@ -1,8 +1,0 @@
-Execution time: 32.54486274719238
-mse: 1.0469063861827088
-Regression coefs:
-	[array([2.99049472]), array([-0.20200801]), array([-1.99317315])]
-Regression interception:
-	[np.float64(-0.034808316128105976), np.float64(0.0032657812783032925), np.float64(0.03680456547116118)]
-Clusters:
-[0 2 1 ... 0 1 0]
