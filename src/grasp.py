@@ -12,7 +12,7 @@ def grasp(data, output_dir_path, k, algorithm):
     best_solution_mse = float('inf')
     best_solution_params = ''
 
-    n = 100
+    n = 30
     for i in range(n):
         sys.stdout.write('-')
         sys.stdout.flush()
@@ -39,11 +39,11 @@ def grasp(data, output_dir_path, k, algorithm):
             )
 
             if not solution_improved:
-                print_progress('\nsolution not improved')
+                print_progress('\nsolution not improved\n')
                 break
 
             if iter > 100000:
-                print_progress('\nexceded iteration number')
+                print_progress('\nexceded iteration number\n')
                 break
 
             labels = deepcopy(new_labels)
@@ -60,14 +60,15 @@ def grasp(data, output_dir_path, k, algorithm):
             best_solution_labels = deepcopy(labels)
             best_solution_regr_coefs = deepcopy(regr_coefs)
             best_solution_regr_interception = deepcopy(regr_interception)
-            best_solution_params = params[i]
+            best_solution_params = params
 
     return best_solution_mse, best_solution_regr_coefs, best_solution_regr_interception, best_solution_labels, best_solution_params
 
 def main(input_file_path, output_dir_path, k, algorithm):
     time_start = time.time()
 
-    data = pd.DataFrame(read_data_from_file(input_file_path), columns=['x', 'y'])
+    file_data, columns = read_data_from_file(input_file_path)
+    data = pd.DataFrame(file_data, columns=columns)
 
     best_solution_mse, best_solution_regr_coefs, best_solution_regr_interception, best_solution_labels, best_solution_params = grasp(
         data, 
@@ -84,17 +85,20 @@ def main(input_file_path, output_dir_path, k, algorithm):
     print_progress('Best solution mse:', str(best_solution_mse), '\n')
     print_progress('Best solution coefs:\n\t', str(best_solution_regr_coefs), '\n')
     print_progress('Best solution inteception:\n\t', str(best_solution_regr_interception), '\n')
-    cluster_visualization(
-        data, 
-        None, 
-        best_solution_labels, 
-        k, 
-        best_solution_regr_coefs, 
-        best_solution_regr_interception, 
-        output_dir_path, 
-        algorithm,
-        'final_clustered_plot.png'
-    )
+    
+    if data.shape[1] == 2:
+        cluster_visualization(
+            data, 
+            None, 
+            best_solution_labels, 
+            k, 
+            best_solution_regr_coefs, 
+            best_solution_regr_interception, 
+            output_dir_path, 
+            algorithm,
+            'final_clustered_plot.png'
+        )
+
     write_results(
         execution_time,
         best_solution_mse, 

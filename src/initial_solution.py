@@ -10,7 +10,7 @@ from utility_functions import elastic_net
 from algorithm import regression_error, calculate_nearest_clusters
 
 def simple_visualization(data, file_path):
-    X = data['x']
+    X = data['x0']
     y = data['y']
     plt.scatter(X, y)
     plt.xlabel('x')
@@ -20,13 +20,14 @@ def simple_visualization(data, file_path):
     plt.close()
 
 def initialization(data, k, output_dir_path, algorithm_name):
-    dir_path = os.path.join(output_dir_path, algorithm_name)
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
-    file_path = os.path.join(dir_path, 'initial_plot.png')    
-    simple_visualization(data, file_path)
+    if data.shape[1] == 2:
+        dir_path = os.path.join(output_dir_path, algorithm_name)
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        file_path = os.path.join(dir_path, 'initial_plot.png') 
+        simple_visualization(data, file_path)
 
-    columns = ['x', 'y']
+    columns = data.columns
     instances = data[columns]
     scaler = MinMaxScaler()
     instances = pd.DataFrame(scaler.fit_transform(instances), columns=columns)
@@ -38,23 +39,24 @@ def initialization(data, k, output_dir_path, algorithm_name):
     error, mse = regression_error(data, model.labels_, regr_coefs, regr_intercept, k)
     nearest_clusters = calculate_nearest_clusters(data, regr_coefs, regr_intercept, k)
 
-    centers = pd.DataFrame(scaler.inverse_transform(model.cluster_centers_), columns=columns)
-    cluster_visualization(
-        data, 
-        centers, 
-        model.labels_, 
-        k, 
-        regr_coefs,
-        regr_intercept,
-        output_dir_path,
-        algorithm_name, 
-        'initial_clustered_plot.png'
-    )
+    if data.shape[1] == 2:
+        centers = pd.DataFrame(scaler.inverse_transform(model.cluster_centers_), columns=columns)
+        cluster_visualization(
+            data, 
+            centers, 
+            model.labels_, 
+            k, 
+            regr_coefs,
+            regr_intercept,
+            output_dir_path,
+            algorithm_name, 
+            'initial_clustered_plot.png'
+        )
 
     return model.labels_, regr_coefs, regr_intercept, error, mse, nearest_clusters
 
 def randomized_initialization(data, k, output_dir_path, algorithm_name):
-    columns = ['x', 'y']
+    columns = data.columns
     instances = data[columns]
     scaler = MinMaxScaler()
     instances = pd.DataFrame(scaler.fit_transform(instances), columns=columns)

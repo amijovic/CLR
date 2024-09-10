@@ -165,9 +165,11 @@ def vnd(data, k, algorithm, algorithm_name, output_dir_path, option):
 def main(input_file_path, output_dir_path, k, algorithm, option):
     time_start = time.time()
 
-    data = pd.DataFrame(read_data_from_file(input_file_path), columns=['x', 'y'])
+    file_data, columns = read_data_from_file(input_file_path)
+    data = pd.DataFrame(file_data, columns=columns)
     algorithm_name = algorithm
 
+    data.columns
     if option == 1:
         algorithm_name += "_1"
 
@@ -187,17 +189,20 @@ def main(input_file_path, output_dir_path, k, algorithm, option):
     print_progress('Best solution mse:', str(best_solution_mse), '\n')
     print_progress('Best solution coefs:\n\t', str(best_solution_regr_coefs), '\n')
     print_progress('Best solution inteception:\n\t', str(best_solution_regr_interception), '\n')
-    cluster_visualization(
-        data, 
-        None, 
-        best_solution_labels, 
-        k, 
-        best_solution_regr_coefs, 
-        best_solution_regr_interception, 
-        output_dir_path, 
-        algorithm_name,
-        'final_clustered_plot.png'
-    )
+
+    if data.shape[1] == 2:
+        cluster_visualization(
+            data, 
+            None, 
+            best_solution_labels, 
+            k, 
+            best_solution_regr_coefs, 
+            best_solution_regr_interception, 
+            output_dir_path, 
+            algorithm_name,
+            'final_clustered_plot.png'
+        )
+
     write_results(
         execution_time,
         best_solution_mse, 

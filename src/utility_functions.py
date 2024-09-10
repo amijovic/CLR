@@ -6,11 +6,16 @@ from copy import deepcopy
 def elastic_net(data, labels, k):
     regr_coefs = []
     regr_intercept = []
+    target = data.columns[-1]
+    attribs = data.columns[:-1]
+    m = len(attribs)
+
     for c in range(k):
         cluster = data[labels == c]
         model = ElasticNet(random_state=0)
-        y = cluster.loc[:, 'y'].values
-        X = cluster.loc[:, 'x'].values.reshape((y.shape[0], 1))
+        y = cluster.loc[:, target].values
+        # X = cluster.loc[:, attribs].values.reshape((y.shape[0], 1))
+        X = cluster.loc[:, attribs].values.reshape((y.shape[0], m))
         model.fit(X, y)
         regr_coefs.append(model.coef_)
         regr_intercept.append(model.intercept_)
@@ -19,11 +24,15 @@ def elastic_net(data, labels, k):
 def recalc_elastic_net(data, labels, clusters, regr_coefs, regr_intercept):
     new_regr_coefs = deepcopy(regr_coefs)
     new_regr_intercept = deepcopy(regr_intercept)
+    target = data.columns[-1]
+    attribs = data.columns[:-1]
+    m = len(attribs)
+
     for c in clusters:
         cluster = data[labels == c]
         model = ElasticNet(random_state=0)
-        y = cluster.loc[:, 'y'].values
-        X = cluster.loc[:, 'x'].values.reshape((y.shape[0], 1))
+        y = cluster.loc[:, target].values
+        X = cluster.loc[:, attribs].values.reshape((y.shape[0], m))
         model.fit(X, y)
         new_regr_coefs[c] = model.coef_
         new_regr_intercept[c] = model.intercept_    
@@ -31,7 +40,7 @@ def recalc_elastic_net(data, labels, clusters, regr_coefs, regr_intercept):
 
 def dist_to_regression_line(point, regr_coef, regr_interception):
     x, y = point[0], point[1]
-    return abs(regr_coef*x - y + regr_interception) / np.sqrt(regr_coef**2 + (-1)**2)
+    return abs(np.dot(regr_coef, x) - y + regr_interception) / np.sqrt(np.sum(regr_coef**2) + (-1)**2)
 
 def calculate_nearest_clusters(data, regr_coefs, regr_interception, k):
     nearest_clusters = []
@@ -46,16 +55,19 @@ def calculate_nearest_clusters(data, regr_coefs, regr_interception, k):
     return nearest_clusters
 
 def predict(X, regr_coef, regr_interception):
-    prediction = map(lambda x: regr_coef*x + regr_interception, X)
+    prediction = map(lambda x: np.dot(regr_coef, x) + regr_interception, X)
     return list(prediction)
 
 def regression_error(data, labels, regr_coefs, regr_interception, k):
     Y_values = []
     Y_predictions = []
+    target = data.columns[-1]
+    attribs = data.columns[:-1]
+
     for c in range(k):
         cluster = data[labels == c]
-        X = cluster.loc[:, 'x'].values
-        Y = cluster.loc[:, 'y'].values
+        X = cluster.loc[:, attribs].values
+        Y = cluster.loc[:, target].values
         y_pred = predict(X, regr_coefs[c], regr_interception[c])
         Y_predictions = Y_predictions + y_pred
         Y_values = Y_values + list(Y)
@@ -67,10 +79,13 @@ def regression_error(data, labels, regr_coefs, regr_interception, k):
 def regression_mse(data, labels, regr_coefs, regr_interception, k):
     Y_values = []
     Y_predictions = []
+    target = data.columns[-1]
+    attribs = data.columns[:-1]
+
     for c in range(k):
         cluster = data[labels == c]
-        X = cluster.loc[:, 'x'].values
-        Y = cluster.loc[:, 'y'].values
+        X = cluster.loc[:, attribs].values
+        Y = cluster.loc[:, target].values
         y_pred = predict(X, regr_coefs[c], regr_interception[c])
         Y_predictions = Y_predictions + y_pred
         Y_values = Y_values + list(Y)
@@ -92,13 +107,15 @@ def calc_error_after_change(inst_idxs, cluster_idxs, data, labels, regr_coefs, r
 
 def calc_error_after_change_approximation(inst_idxs, new_cluster_idxs, data, labels, error, regr_coefs, regr_interception):
     new_error = error
+    target = data.columns[-1]
+    attribs = data.columns[:-1]
+    
     for i, inst_idx in enumerate(inst_idxs):
         new_cluster_idx = new_cluster_idxs[i]
-        point = data.iloc[inst_idx]
-        x, y = point['x'], point['y']
+        x, y = data.loc[inst_idx, attribs], data.loc[inst_idx, target]
         old_cluster_idx = labels[inst_idx]
-        new_error = new_error - abs(y - (regr_coefs[old_cluster_idx]*x + regr_interception[old_cluster_idx]))
-        new_error = new_error + abs(y - (regr_coefs[new_cluster_idx]*x + regr_interception[new_cluster_idx]))
+        new_error = new_error - abs(y - (np.dot(regr_coefs[old_cluster_idx], x) + regr_interception[old_cluster_idx]))
+        new_error = new_error + abs(y - (np.dot(regr_coefs[new_cluster_idx], x) + regr_interception[new_cluster_idx]))
     return new_error
 
 def main():

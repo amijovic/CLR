@@ -15,7 +15,16 @@ def move_one_inst(data, nearest_clusters, labels, best_solution_mse, best_soluti
             if j == labels[instance]:
                 break
 
-            mse, regr_coefs, regr_interception, new_labels = calc_error_after_change(instance, j, data, labels, best_solution_regr_coefs, best_solution_regr_interception, k)
+            mse, regr_coefs, regr_interception, new_labels = calc_error_after_change(
+                [instance], 
+                [j], 
+                data, 
+                labels, 
+                best_solution_regr_coefs, 
+                best_solution_regr_interception, 
+                k
+            )
+
             if mse < best_solution_mse:
                 new_nearest_clusters = calculate_nearest_clusters(data, regr_coefs, regr_interception, k)
                 return True, mse, new_labels, new_nearest_clusters, regr_coefs, regr_interception
