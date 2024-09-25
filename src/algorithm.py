@@ -120,50 +120,6 @@ def move_l_instances(data, nearest_clusters, labels, best_solution_error, best_s
 
     return False, best_solution_error, best_solution_mse, labels, nearest_clusters, best_solution_regr_coefs, best_solution_regr_interception
 
-def move_instances_to_one_cluster(data, labels, best_solution_error, best_solution_mse, best_solution_regr_coefs, best_solution_regr_interception, c, k):
-    instance_idx = [i for i in range(data.shape[0])]
-    shuffled_instances = sorted(instance_idx, key=lambda x: random.random())
-
-    eps = 0.01
-    insts  = [] # [inst_idx]
-    error = best_solution_error
-    i = 0
-    while i < len(shuffled_instances):
-        instance = shuffled_instances[i]
-        
-        if labels[instance] == c:
-                i += 1
-                continue
-        
-        error = calc_error_after_change_approximation(
-            [instance], 
-            [c], 
-            data, 
-            labels, 
-            error, 
-            best_solution_regr_coefs, 
-            best_solution_regr_interception
-        )
-
-        if error < (best_solution_error + eps):
-            insts.append(instance)
-        i += 1
-
-    if error < best_solution_error:
-        clusters = [c]
-        new_labels = deepcopy(labels)
-        for inst in insts:
-            clusters.append(labels[inst])
-            new_labels[inst] = c
-        regr_coefs, regr_interception = recalc_elastic_net(data, new_labels, clusters, best_solution_regr_coefs, best_solution_regr_interception)
-        error_after_change, mse = regression_error(data, new_labels, regr_coefs, regr_interception, k)
-
-        if mse < best_solution_mse:
-            new_nearest_clusters = calculate_nearest_clusters(data, regr_coefs, regr_interception, k)
-            return True, error_after_change, mse, new_labels, new_nearest_clusters, regr_coefs, regr_interception
-
-    return False, None, None, None, None, None, None
-
 def local_search_swap(data, nearest_clusters, labels, best_solution_error, best_solution_mse, best_solution_regr_coefs, best_solution_regr_interception, k):
     instance_idx = [i for i in range(data.shape[0])]
     shuffled_instances = sorted(instance_idx, key=lambda x: random.random())

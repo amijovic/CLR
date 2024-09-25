@@ -39,7 +39,7 @@ def recalc_elastic_net(data, labels, clusters, regr_coefs, regr_intercept):
     return new_regr_coefs, new_regr_intercept
 
 def dist_to_regression_line(point, regr_coef, regr_interception):
-    x, y = point[0], point[1]
+    x, y = point[:-1], point[-1]
     return abs(np.dot(regr_coef, x) - y + regr_interception) / np.sqrt(np.sum(regr_coef**2) + (-1)**2)
 
 def calculate_nearest_clusters(data, regr_coefs, regr_interception, k):
@@ -109,7 +109,7 @@ def calc_error_after_change_approximation(inst_idxs, new_cluster_idxs, data, lab
     new_error = error
     target = data.columns[-1]
     attribs = data.columns[:-1]
-    
+
     for i, inst_idx in enumerate(inst_idxs):
         new_cluster_idx = new_cluster_idxs[i]
         x, y = data.loc[inst_idx, attribs], data.loc[inst_idx, target]
@@ -117,6 +117,14 @@ def calc_error_after_change_approximation(inst_idxs, new_cluster_idxs, data, lab
         new_error = new_error - abs(y - (np.dot(regr_coefs[old_cluster_idx], x) + regr_interception[old_cluster_idx]))
         new_error = new_error + abs(y - (np.dot(regr_coefs[new_cluster_idx], x) + regr_interception[new_cluster_idx]))
     return new_error
+
+def calc_cluster_centroids(X, k, labels):
+    centroids = []
+    for c in range(k):
+        cluster = X[labels == c]
+        centroid = np.mean(cluster)
+        centroids.append(centroid)
+    return centroids
 
 def main():
     return

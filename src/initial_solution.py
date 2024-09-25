@@ -1,11 +1,10 @@
 import os
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from matplotlib import pyplot as plt
 import pandas as pd
 import random
 
-from utils import cluster_visualization
 from utility_functions import elastic_net
 from algorithm import regression_error, calculate_nearest_clusters
 
@@ -19,17 +18,10 @@ def simple_visualization(data, file_path):
     plt.savefig(file_path)
     plt.close()
 
-def initialization(data, k, output_dir_path, algorithm_name):
-    if data.shape[1] == 2:
-        dir_path = os.path.join(output_dir_path, algorithm_name)
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-        file_path = os.path.join(dir_path, 'initial_plot.png') 
-        simple_visualization(data, file_path)
-
+def initialization(data, k):
     columns = data.columns
     instances = data[columns]
-    scaler = MinMaxScaler()
+    scaler = StandardScaler()
     instances = pd.DataFrame(scaler.fit_transform(instances), columns=columns)
 
     model = KMeans(n_clusters=k, n_init='auto')
@@ -39,26 +31,25 @@ def initialization(data, k, output_dir_path, algorithm_name):
     error, mse = regression_error(data, model.labels_, regr_coefs, regr_intercept, k)
     nearest_clusters = calculate_nearest_clusters(data, regr_coefs, regr_intercept, k)
 
-    if data.shape[1] == 2:
-        centers = pd.DataFrame(scaler.inverse_transform(model.cluster_centers_), columns=columns)
-        cluster_visualization(
-            data, 
-            centers, 
-            model.labels_, 
-            k, 
-            regr_coefs,
-            regr_intercept,
-            output_dir_path,
-            algorithm_name, 
-            'initial_clustered_plot.png'
-        )
-
     return model.labels_, regr_coefs, regr_intercept, error, mse, nearest_clusters
 
-def randomized_initialization(data, k, output_dir_path, algorithm_name):
+def initialization_find_k(data, output_dir_path, algorithm_name):
+    solutions = []
+    for k in range(2, 10):
+        solution = initialization(data, k, output_dir_path, algorithm_name)
+        solutions.append((solution, k))
+    return solutions
+
+def randomized_initialization_find_k(data):
+    ks = [i for i in range(2, 10)]
+    k = random.choice(ks)
+    initial_solution = randomized_initialization(data, k)
+    return initial_solution
+
+def randomized_initialization(data, k):
     columns = data.columns
     instances = data[columns]
-    scaler = MinMaxScaler()
+    scaler = StandardScaler()
     instances = pd.DataFrame(scaler.fit_transform(instances), columns=columns)
 
     inits = ['k-means++', 'random']
