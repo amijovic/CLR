@@ -1,0 +1,10 @@
+Execution time: 21250.712114810944
+Best model k: 2
+Best model train mse: 0.952924172930199
+Best model test rmse: 1.1132698039791864
+Best model regression coefs:
+	[array([-0.,  0.,  0.,  0.,  0.]), array([-0.03978498,  0.        ,  0.        , -0.        , -0.        ])]
+Best model regression interception:
+	[2.2636463036501113, 2.3449410765385945]
+Clusters:
+[0 1 1 ... 0 0 1]

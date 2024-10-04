@@ -5,8 +5,8 @@ from matplotlib import pyplot as plt
 from copy import deepcopy
 from sklearn.preprocessing import StandardScaler
 
-show_progress = True
-# show_progress = False
+# show_progress = True
+show_progress = False
 
 def print_progress(*msg):
     if show_progress:
@@ -73,29 +73,24 @@ def cluster_visualization(data, centers, labels, k, regr_coefs, regr_intercept, 
     plt.savefig(file_path)
     plt.close()
 
-def write_results(time, k, mse, regr_coefs, regr_interception, labels, dir_path, algorithm_name, rmse, param_values, param_scores):
-    dir_path = os.path.join(dir_path, algorithm_name)
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
-    file_path = os.path.join(dir_path, 'results.txt')
-    plot_path = os.path.join(dir_path, 'train_rmse_plot.png')
-
-    plt.plot(param_values, param_scores)
-    plt.xlabel('k')
-    plt.ylabel('RMSE')
-    plt.savefig(plot_path)
-    plt.close()
+def write_results(time, k, mse, regr_coefs, regr_interception, labels, file_path, rmse, param_values, param_scores):
+    # plot_path = os.path.join(dir_path, 'train_rmse_plot.png')
+    # plt.plot(param_values, param_scores)
+    # plt.xlabel('k')
+    # plt.ylabel('RMSE')
+    # plt.savefig(plot_path)
+    # plt.close()
 
     with open(file_path, 'w') as f:
         f.write('Execution time: ' + str(time) + '\n')
         f.write('Best model k: ' + str(k) + '\n')
         f.write('Best model train mse: ' + str(mse) + '\n')
         f.write('Best model test rmse: ' + str(rmse) + '\n')
-        f.write('Regression coefs:\n\t' + str(regr_coefs) + '\n')
-        f.write('Regression interception:\n\t' + str(regr_interception) + '\n')
+        f.write('Best model regression coefs:\n\t' + str(regr_coefs) + '\n')
+        f.write('Best model regression interception:\n\t' + str(regr_interception) + '\n')
         f.write('Clusters:\n' + str(labels) + '\n')
 
-def save_results(execution_time, k, mse, regr_coefs, regr_interception, labels, data, algorithm, output_dir_path, rmse, param_values, param_scores, params=None):
+def save_results(execution_time, k, mse, regr_coefs, regr_interception, labels, data, file_path, rmse, param_values, param_scores, params=None):
     print_progress('\n')
     if params is not None:
         print_progress('Best model parameters: ', str(params), '\n')
@@ -106,19 +101,19 @@ def save_results(execution_time, k, mse, regr_coefs, regr_interception, labels, 
     print_progress('Best model inteception:\n\t', str(regr_interception), '\n')
     print_progress('MRSE: ', str(rmse))
     
-    if data.shape[1] == 2:
-        data = data_preprocessing(data)
-        cluster_visualization(
-            data, 
-            None, 
-            labels, 
-            k, 
-            regr_coefs, 
-            regr_interception, 
-            output_dir_path, 
-            algorithm,
-            'final_clustered_plot.png'
-        )
+    # if data.shape[1] == 2:
+    #     data = data_preprocessing(data)
+    #     cluster_visualization(
+    #         data, 
+    #         None, 
+    #         labels, 
+    #         k, 
+    #         regr_coefs, 
+    #         regr_interception, 
+    #         output_dir_path, 
+    #         algorithm,
+    #         'final_clustered_plot.png'
+    #     )
 
     write_results(
         execution_time,
@@ -127,8 +122,7 @@ def save_results(execution_time, k, mse, regr_coefs, regr_interception, labels, 
         regr_coefs, 
         regr_interception,
         labels,
-        output_dir_path,
-        algorithm,
+        file_path,
         rmse,
         param_values,
         param_scores
